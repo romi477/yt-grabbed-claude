@@ -82,10 +82,56 @@
       </div>
     </section>
 
-    <!-- ── Part 2: Transcribe (coming soon) ── -->
-    <section class="card disabled" id="section-transcribe">
-      <h2>Transcribe <span class="badge">Coming soon</span></h2>
-      <p class="muted">Speech-to-text via Whisper. Export as TXT, PDF or JSON.</p>
+    <!-- ── Part 2: Transcribe ── -->
+    <section class="card" id="section-transcribe">
+      <h2>Transcribe</h2>
+
+      <!-- File select -->
+      <div class="select-row">
+        <label for="file-select">File</label>
+        <select id="file-select">
+          <option value="">— select a downloaded file —</option>
+        </select>
+        <button id="btn-refresh-files" class="btn-ghost" title="Refresh list">↻</button>
+      </div>
+
+      <!-- Model select -->
+      <div class="select-row">
+        <label for="model-select">Model</label>
+        <select id="model-select">
+          <option value="tiny">tiny — fastest</option>
+          <option value="base" selected>base — recommended</option>
+          <option value="small">small — better accuracy</option>
+          <option value="medium">medium — most accurate</option>
+        </select>
+      </div>
+
+      <!-- Transcribe button -->
+      <div>
+        <button id="btn-transcribe" class="btn-primary">Transcribe</button>
+      </div>
+
+      <!-- Spinner -->
+      <div id="tr-progress-row" class="hidden">
+        <div class="spinner"></div>
+        <span class="muted">Transcribing… this may take a while</span>
+      </div>
+
+      <!-- Result -->
+      <div id="tr-result-row" class="hidden">
+        <textarea id="tr-textarea" readonly placeholder="Transcript will appear here…"></textarea>
+        <div class="export-row">
+          <span class="save-status">✓ Done</span>
+          <button id="btn-export-txt"  class="btn-secondary">TXT</button>
+          <button id="btn-export-pdf"  class="btn-secondary">PDF</button>
+          <button id="btn-export-json" class="btn-secondary">JSON</button>
+        </div>
+      </div>
+
+      <!-- Error -->
+      <div id="tr-error-row" class="hidden">
+        <p id="tr-error-msg" class="error-msg"></p>
+      </div>
     </section>
   </div>
 

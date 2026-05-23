@@ -197,6 +197,134 @@ async function onDownloadDone() {
   show(saveRow);
 }
 
+// ── Part 2: Transcribe ───────────────────────────────────────────────────────
+
+const fileSelect      = document.getElementById("file-select");
+const btnRefreshFiles = document.getElementById("btn-refresh-files");
+const modelSelect     = document.getElementById("model-select");
+const btnTranscribe   = document.getElementById("btn-transcribe");
+const trProgressRow   = document.getElementById("tr-progress-row");
+const trResultRow     = document.getElementById("tr-result-row");
+const trTextarea      = document.getElementById("tr-textarea");
+const trErrorRow      = document.getElementById("tr-error-row");
+const trErrorMsg      = document.getElementById("tr-error-msg");
+
+let trJobId   = null;
+let trPollTimer = null;
+let trJobTitle = "";
+
+// Load file list on page load and on refresh click
+async function loadFileList() {
+  try {
+    const res = await fetch(`${API}/api/files`);
+    const files = await res.json();
+    fileSelect.innerHTML = '<option value="">— select a downloaded file —</option>';
+    files
+      .sort((a, b) => b.modified - a.modified)
+      .forEach(f => {
+        const opt = document.createElement("option");
+        opt.value = f.name;
+        opt.textContent = `${f.name} (${(f.size / 1024 / 1024).toFixed(1)} MB)`;
+        fileSelect.appendChild(opt);
+      });
+  } catch (_) {}
+}
+
+loadFileList();
+btnRefreshFiles.addEventListener("click", loadFileList);
+
+// Start transcription
+btnTranscribe.addEventListener("click", async () => {
+  const filename = fileSelect.value;
+  if (!filename) return;
+
+  trErrorRow.classList.add("hidden");
+  trResultRow.classList.add("hidden");
+  trProgressRow.classList.remove("hidden");
+  btnTranscribe.disabled = true;
+
+  trJobTitle = filename.replace(/\.[^.]+$/, ""); // strip extension for export title
+
+  try {
+    const res = await fetch(`${API}/api/transcribe`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ filename, model: modelSelect.value }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || "Failed to start transcription");
+    }
+    const data = await res.json();
+    trJobId = data.job_id;
+    pollTranscribeJob(trJobId);
+  } catch (e) {
+    trProgressRow.classList.add("hidden");
+    trErrorMsg.textContent = e.message;
+    trErrorRow.classList.remove("hidden");
+    btnTranscribe.disabled = false;
+  }
+});
+
+function pollTranscribeJob(jobId) {
+  clearInterval(trPollTimer);
+  trPollTimer = setInterval(async () => {
+    try {
+      const res = await fetch(`${API}/api/transcribe/${jobId}`);
+      const job = await res.json();
+
+      if (job.status === "done") {
+        clearInterval(trPollTimer);
+        trProgressRow.classList.add("hidden");
+        trTextarea.value = job.result || "";
+        trResultRow.classList.remove("hidden");
+        btnTranscribe.disabled = false;
+      } else if (job.status === "error") {
+        clearInterval(trPollTimer);
+        trProgressRow.classList.add("hidden");
+        trErrorMsg.textContent = job.error || "Transcription failed";
+        trErrorRow.classList.remove("hidden");
+        btnTranscribe.disabled = false;
+      }
+    } catch (e) {
+      clearInterval(trPollTimer);
+      trErrorMsg.textContent = "Lost connection to server";
+      trErrorRow.classList.remove("hidden");
+    }
+  }, 2000);
+}
+
+// Export buttons
+async function doExport(format) {
+  if (!trJobId) return;
+  try {
+    const res = await fetch(`${API}/api/export`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ job_id: trJobId, format, title: trJobTitle }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || "Export failed");
+    }
+    // Trigger browser download
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${trJobTitle}.${format}`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    trErrorMsg.textContent = e.message;
+    trErrorRow.classList.remove("hidden");
+  }
+}
+
+document.getElementById("btn-export-txt").addEventListener("click",  () => doExport("txt"));
+document.getElementById("btn-export-pdf").addEventListener("click",  () => doExport("pdf"));
+document.getElementById("btn-export-json").addEventListener("click", () => doExport("json"));
+
 // ── Reset ─────────────────────────────────────────────────────────────────────
 btnNew.addEventListener("click", () => {
   urlInput.value = "";

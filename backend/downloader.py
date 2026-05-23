@@ -116,7 +116,7 @@ def download_video(url: str, quality: str, job_id: str) -> Path:
     cmd = BASE_CMD + [
         "--format", FORMAT_MAP.get(quality, FORMAT_MAP["best"]),
         "--merge-output-format", "mp4",
-        "--output", str(DATA_DIR / "%(title)s.%(ext)s"),
+        "--output", str(DATA_DIR / f"%(title)s [{quality}p].%(ext)s"),
         url,
     ]
     update_job(job_id, status="running", progress=0)
@@ -135,7 +135,7 @@ def download_audio(url: str, job_id: str) -> Path:
         "--extract-audio",
         "--audio-format", "mp3",
         "--audio-quality", "0",
-        "--output", str(DATA_DIR / "%(title)s.%(ext)s"),
+        "--output", str(DATA_DIR / "%(title)s [320kbps].%(ext)s"),
         url,
     ]
     update_job(job_id, status="running", progress=0)

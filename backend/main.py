@@ -7,7 +7,9 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 import downloader
+import exporter
 import jobs
+import transcriber
 
 app = FastAPI(title="yt-grabber")
 
@@ -28,6 +30,16 @@ class DownloadRequest(BaseModel):
     type: str       # "video" | "audio"
     quality: str = "best"
 
+class TranscribeRequest(BaseModel):
+    filename: str
+    model: str = "base"
+
+class ExportRequest(BaseModel):
+    job_id: str
+    format: str     # "txt" | "pdf" | "json"
+    title: str = "transcript"
+    url: str = ""
+
 
 # --- Background task wrappers ---
 
@@ -41,6 +53,13 @@ def _run_download_video(url: str, quality: str, job_id: str):
 def _run_download_audio(url: str, job_id: str):
     try:
         downloader.download_audio(url, job_id)
+    except Exception as e:
+        jobs.update_job(job_id, status="error", error=str(e))
+
+
+def _run_transcribe(filepath: str, model_name: str, job_id: str):
+    try:
+        transcriber.transcribe(Path(filepath), model_name, job_id)
     except Exception as e:
         jobs.update_job(job_id, status="error", error=str(e))
 
@@ -103,6 +122,53 @@ def download_file(filename: str):
     if not path.exists() or not path.is_file():
         raise HTTPException(status_code=404, detail="File not found")
     return FileResponse(path, filename=filename)
+
+
+# --- Part 2: Transcribe endpoints ---
+
+@app.post("/api/transcribe")
+def start_transcribe(req: TranscribeRequest, background_tasks: BackgroundTasks):
+    """Start a Whisper transcription job. Returns job_id for polling."""
+    filepath = Path("data") / req.filename
+    if not filepath.exists():
+        raise HTTPException(status_code=404, detail="File not found in data/")
+
+    job_id = jobs.create_job()
+    background_tasks.add_task(_run_transcribe, str(filepath), req.model, job_id)
+    return {"job_id": job_id}
+
+
+@app.get("/api/transcribe/{job_id}")
+def get_transcribe_job(job_id: str):
+    """Poll transcription job status and result."""
+    job = jobs.get_job(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return job
+
+
+@app.post("/api/export")
+def export_transcript(req: ExportRequest):
+    """Export a finished transcript as txt, pdf or json. Returns the file."""
+    job = jobs.get_job(req.job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job not found")
+    if job["status"] != "done":
+        raise HTTPException(status_code=400, detail="Transcription not finished yet")
+
+    text = job["result"]
+    fmt = req.format.lower()
+
+    if fmt == "txt":
+        path = exporter.export_txt(text, req.title)
+    elif fmt == "json":
+        path = exporter.export_json(text, req.title, req.url, model=job.get("model", "base"))
+    elif fmt == "pdf":
+        path = exporter.export_pdf(text, req.title)
+    else:
+        raise HTTPException(status_code=400, detail=f"Unknown format: {fmt}")
+
+    return FileResponse(path, filename=path.name)
 
 
 # --- Static frontend (local dev without Docker) ---
