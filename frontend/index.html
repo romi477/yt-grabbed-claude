@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>yt-grabber</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>yt-grabber</h1>
+      <p class="subtitle">Download YouTube videos and audio</p>
+    </header>
+
+    <!-- ── Part 1: Download ── -->
+    <section class="card" id="section-download">
+      <h2>Download</h2>
+
+      <!-- URL input -->
+      <div class="input-row">
+        <input
+          type="text"
+          id="url-input"
+          placeholder="Paste YouTube URL here..."
+          autocomplete="off"
+        />
+        <button id="btn-info" class="btn-primary">Get Info</button>
+      </div>
+
+      <!-- Video preview -->
+      <div id="video-preview" class="hidden">
+        <div class="preview-inner">
+          <img id="preview-thumb" src="" alt="thumbnail" />
+          <div class="preview-meta">
+            <p id="preview-title" class="preview-title"></p>
+            <p id="preview-uploader" class="preview-sub"></p>
+            <p id="preview-duration" class="preview-sub"></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Type toggle -->
+      <div id="type-row" class="type-row hidden">
+        <label class="radio-label">
+          <input type="radio" name="dl-type" value="video" checked /> Video (mp4)
+        </label>
+        <label class="radio-label">
+          <input type="radio" name="dl-type" value="audio" /> Audio (mp3)
+        </label>
+      </div>
+
+      <!-- Quality select -->
+      <div id="quality-row" class="quality-row hidden">
+        <label for="quality-select">Quality</label>
+        <select id="quality-select"></select>
+      </div>
+
+      <!-- Download button -->
+      <div id="download-row" class="hidden">
+        <button id="btn-download" class="btn-primary">Download</button>
+      </div>
+
+      <!-- Progress -->
+      <div id="progress-row" class="hidden">
+        <div class="progress-bar-wrap">
+          <div id="progress-bar" class="progress-bar" style="width:0%"></div>
+        </div>
+        <span id="progress-label">0%</span>
+      </div>
+
+      <!-- Save -->
+      <div id="save-row" class="hidden">
+        <span id="save-status" class="save-status">✓ Done</span>
+        <a id="save-link" href="#" class="btn-secondary">Save to disk</a>
+        <button id="btn-new" class="btn-ghost">Download another</button>
+      </div>
+
+      <!-- Error -->
+      <div id="error-row" class="hidden">
+        <p id="error-msg" class="error-msg"></p>
+      </div>
+    </section>
+
+    <!-- ── Part 2: Transcribe (coming soon) ── -->
+    <section class="card disabled" id="section-transcribe">
+      <h2>Transcribe <span class="badge">Coming soon</span></h2>
+      <p class="muted">Speech-to-text via Whisper. Export as TXT, PDF or JSON.</p>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
